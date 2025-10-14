@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-webauthn/webauthn/protocol"
-	"github.com/go-webauthn/webauthn/webauthn"
+	"github.com/philhofer/webauthn/protocol"
+	"github.com/philhofer/webauthn/webauthn"
 )
 
 // Example_passkeysRegisterAndLogin demonstrates handling Passkey registration and Logins. This uses the higher level APIs to

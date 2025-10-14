@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/go-webauthn/webauthn/metadata"
+	"github.com/philhofer/webauthn/metadata"
 )
 
 // New returns a new cached Provider given a set of functional [Option]'s. This provider will download a new version and

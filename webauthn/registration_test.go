@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/go-webauthn/webauthn/protocol"
+	"github.com/philhofer/webauthn/protocol"
 )
 
 func noerr(t *testing.T, err error) {

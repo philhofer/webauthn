@@ -7,7 +7,7 @@ import (
 	"encoding/asn1"
 	"time"
 
-	"github.com/go-webauthn/webauthn/metadata"
+	"github.com/philhofer/webauthn/metadata"
 )
 
 // attestationFormatValidationHandlerAppleAnonymous is the handler for the Apple Anonymous Attestation Statement Format.

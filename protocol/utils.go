@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-webauthn/webauthn/protocol/webauthncose"
+	"github.com/philhofer/webauthn/protocol/webauthncose"
 )
 
 func mustParseX509Certificate(der []byte) *x509.Certificate {

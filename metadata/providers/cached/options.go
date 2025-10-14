@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/go-webauthn/webauthn/metadata"
+	"github.com/philhofer/webauthn/metadata"
 )
 
 // Option describes an optional pattern for this provider.

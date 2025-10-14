@@ -4,7 +4,7 @@ import (
 	"crypto/sha256"
 	"testing"
 
-	"github.com/go-webauthn/webauthn/metadata"
+	"github.com/philhofer/webauthn/metadata"
 )
 
 func Test_VerifyAppleFormat(t *testing.T) {

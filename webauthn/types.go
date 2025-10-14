@@ -5,8 +5,8 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/go-webauthn/webauthn/metadata"
-	"github.com/go-webauthn/webauthn/protocol"
+	"github.com/philhofer/webauthn/metadata"
+	"github.com/philhofer/webauthn/protocol"
 )
 
 // New creates a new WebAuthn object given the proper Config.

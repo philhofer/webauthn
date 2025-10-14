@@ -6,9 +6,9 @@ import (
 	"crypto/elliptic"
 	"crypto/x509"
 
-	"github.com/go-webauthn/webauthn/metadata"
-	"github.com/go-webauthn/webauthn/protocol/webauthncbor"
-	"github.com/go-webauthn/webauthn/protocol/webauthncose"
+	"github.com/philhofer/webauthn/metadata"
+	"github.com/philhofer/webauthn/protocol/webauthncbor"
+	"github.com/philhofer/webauthn/protocol/webauthncose"
 )
 
 // attestationFormatValidationHandlerFIDOU2F is the handler for the FIDO U2F Attestation Statement Format.

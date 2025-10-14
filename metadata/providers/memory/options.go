@@ -3,7 +3,7 @@ package memory
 import (
 	"github.com/google/uuid"
 
-	"github.com/go-webauthn/webauthn/metadata"
+	"github.com/philhofer/webauthn/metadata"
 )
 
 // Option describes an optional pattern for this provider.

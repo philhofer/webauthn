@@ -6,8 +6,8 @@ import (
 	"io"
 	"testing"
 
-	"github.com/go-webauthn/webauthn/protocol/webauthncbor"
-	"github.com/go-webauthn/webauthn/protocol/webauthncose"
+	"github.com/philhofer/webauthn/protocol/webauthncbor"
+	"github.com/philhofer/webauthn/protocol/webauthncose"
 )
 
 func TestParseCredentialCreationResponse(t *testing.T) {

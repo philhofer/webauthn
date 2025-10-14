@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/go-webauthn/webauthn/protocol/webauthncbor"
+	"github.com/philhofer/webauthn/protocol/webauthncbor"
 )
 
 // TestOKPSignatureVerification is a compatibility test to ensure that removing

@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/go-webauthn/webauthn/protocol/webauthncose"
+	"github.com/philhofer/webauthn/protocol/webauthncose"
 )
 
 // The Provider is an interface which describes the elements required to satisfy validation of metadata.

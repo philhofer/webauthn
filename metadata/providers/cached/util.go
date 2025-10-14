@@ -4,8 +4,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/go-webauthn/webauthn/metadata"
-	"github.com/go-webauthn/webauthn/metadata/providers/memory"
+	"github.com/philhofer/webauthn/metadata"
+	"github.com/philhofer/webauthn/metadata/providers/memory"
 )
 
 func doTruncateCopyAndSeekStart(f *os.File, rc io.ReadCloser) (err error) {

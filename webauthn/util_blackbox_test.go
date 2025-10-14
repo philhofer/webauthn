@@ -4,7 +4,7 @@ import (
 	"crypto/subtle"
 	"fmt"
 
-	"github.com/go-webauthn/webauthn/webauthn"
+	"github.com/philhofer/webauthn/webauthn"
 )
 
 type defaultUser struct {

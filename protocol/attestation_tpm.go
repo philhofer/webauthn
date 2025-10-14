@@ -11,8 +11,8 @@ import (
 
 	"github.com/google/go-tpm/legacy/tpm2"
 
-	"github.com/go-webauthn/webauthn/metadata"
-	"github.com/go-webauthn/webauthn/protocol/webauthncose"
+	"github.com/philhofer/webauthn/metadata"
+	"github.com/philhofer/webauthn/protocol/webauthncose"
 )
 
 // attestationFormatValidationHandlerTPM is the handler for the TPM Attestation Statement Format.

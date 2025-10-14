@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-webauthn/webauthn/metadata"
-	"github.com/go-webauthn/webauthn/protocol/webauthncose"
+	"github.com/philhofer/webauthn/metadata"
+	"github.com/philhofer/webauthn/protocol/webauthncose"
 )
 
 // attestationFormatValidationHandlerAndroidKey is the handler for the Android Key Attestation Statement Format.

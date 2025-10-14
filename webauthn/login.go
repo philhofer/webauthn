@@ -10,7 +10,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/go-webauthn/webauthn/protocol"
+	"github.com/philhofer/webauthn/protocol"
 )
 
 // LoginOption is used to provide parameters that modify the default [Credential] Assertion Payload that is sent to the user.

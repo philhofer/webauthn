@@ -13,7 +13,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/mitchellh/mapstructure"
 
-	"github.com/go-webauthn/x/revoke"
+	"github.com/philhofer/webauthn/internal/revoke"
 )
 
 // NewDecoder returns a new metadata decoder.

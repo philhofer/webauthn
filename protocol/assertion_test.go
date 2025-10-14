@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/go-webauthn/webauthn/protocol/webauthncbor"
+	"github.com/philhofer/webauthn/protocol/webauthncbor"
 )
 
 func noerr(t *testing.T, err error) {

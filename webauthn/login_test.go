@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/go-webauthn/webauthn/protocol"
+	"github.com/philhofer/webauthn/protocol"
 )
 
 func TestLogin_FinishLoginFailure(t *testing.T) {

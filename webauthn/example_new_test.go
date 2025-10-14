@@ -1,6 +1,6 @@
 package webauthn_test
 
-import "github.com/go-webauthn/webauthn/webauthn"
+import "github.com/philhofer/webauthn/webauthn"
 
 // Example_newRelyingParty demonstrates initializing a relying party.
 func Example_newRelyingParty() {

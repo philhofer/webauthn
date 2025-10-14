@@ -19,8 +19,8 @@ import (
 
 	"github.com/google/go-tpm/legacy/tpm2"
 
-	"github.com/go-webauthn/webauthn/protocol/webauthncbor"
-	"github.com/go-webauthn/webauthn/protocol/webauthncose"
+	"github.com/philhofer/webauthn/protocol/webauthncbor"
+	"github.com/philhofer/webauthn/protocol/webauthncose"
 )
 
 func errlike(t *testing.T, err error, want string) {

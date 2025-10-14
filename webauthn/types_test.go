@@ -3,7 +3,7 @@ package webauthn
 import (
 	"testing"
 
-	"github.com/go-webauthn/webauthn/protocol"
+	"github.com/philhofer/webauthn/protocol"
 )
 
 type defaultUser struct {

@@ -4,8 +4,8 @@ import (
 	"crypto/sha256"
 	"fmt"
 
-	"github.com/go-webauthn/webauthn/metadata"
-	"github.com/go-webauthn/webauthn/protocol"
+	"github.com/philhofer/webauthn/metadata"
+	"github.com/philhofer/webauthn/protocol"
 )
 
 // Credential contains all needed information about a WebAuthn credential for storage. This struct is effectively the
