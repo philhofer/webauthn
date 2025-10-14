@@ -27,18 +27,17 @@ func (webauthn *WebAuthn) BeginRegistration(user User, opts ...RegistrationOptio
 
 // BeginMediatedRegistration is similar to [WebAuthn.BeginRegistration] however it also allows specifying a credential
 // mediation requirement.
-func (webauthn *WebAuthn) BeginMediatedRegistration(user User, mediation protocol.CredentialMediationRequirement, opts ...RegistrationOption) (creation *protocol.CredentialCreation, session *SessionData, err error) {
-	if err = webauthn.Config.validate(); err != nil {
+func (webauthn *WebAuthn) BeginMediatedRegistration(user User, mediation protocol.CredentialMediationRequirement, opts ...RegistrationOption) (*protocol.CredentialCreation, *SessionData, error) {
+	err := webauthn.Config.validate()
+	if err != nil {
 		return nil, nil, errValidate(err)
 	}
-
 	challenge, err := protocol.CreateChallenge()
 	if err != nil {
 		return nil, nil, err
 	}
 
 	var entityUserID any
-
 	if webauthn.Config.EncodeUserIDAsString {
 		entityUserID = string(user.WebAuthnID())
 	} else {
@@ -61,8 +60,7 @@ func (webauthn *WebAuthn) BeginMediatedRegistration(user User, mediation protoco
 	}
 
 	credentialParams := CredentialParametersDefault()
-
-	creation = &protocol.CredentialCreation{
+	creation := &protocol.CredentialCreation{
 		Response: protocol.PublicKeyCredentialCreationOptions{
 			RelyingParty:           entityRelyingParty,
 			User:                   entityUser,
@@ -83,7 +81,6 @@ func (webauthn *WebAuthn) BeginMediatedRegistration(user User, mediation protoco
 	} else if _, err = url.Parse(creation.Response.RelyingParty.ID); err != nil {
 		return nil, nil, fmt.Errorf("error generating credential creation: the relying party id failed to validate as it's not a valid uri with error: %w", err)
 	}
-
 	if len(creation.Response.RelyingParty.Name) == 0 {
 		return nil, nil, fmt.Errorf("error generating credential creation: the relying party display name must be provided via the configuration or a functional option for a creation")
 	}
@@ -97,7 +94,7 @@ func (webauthn *WebAuthn) BeginMediatedRegistration(user User, mediation protoco
 		}
 	}
 
-	session = &SessionData{
+	session := &SessionData{
 		Challenge:        challenge.String(),
 		RelyingPartyID:   creation.Response.RelyingParty.ID,
 		UserID:           user.WebAuthnID(),
@@ -105,7 +102,6 @@ func (webauthn *WebAuthn) BeginMediatedRegistration(user User, mediation protoco
 		CredParams:       creation.Response.Parameters,
 		Mediation:        creation.Mediation,
 	}
-
 	if webauthn.Config.Timeouts.Registration.Enforce {
 		session.Expires = time.Now().Add(time.Millisecond * time.Duration(creation.Response.Timeout))
 	}
@@ -220,12 +216,11 @@ func WithRegistrationRelyingPartyName(name string) RegistrationOption {
 // [io.Reader] or byte array respectively, you can also use an arbitrary [*protocol.ParsedCredentialCreationData] which is
 // returned from all of these functions i.e. by implementing a custom parser. The [User], [*SessionData], and
 // [*protocol.ParsedCredentialCreationData] can then be used with the [WebAuthn.CreateCredential] function.
-func (webauthn *WebAuthn) FinishRegistration(user User, session SessionData, request *http.Request) (credential *Credential, err error) {
+func (webauthn *WebAuthn) FinishRegistration(user User, session SessionData, request *http.Request) (*Credential, error) {
 	parsedResponse, err := protocol.ParseCredentialCreationResponse(request)
 	if err != nil {
 		return nil, err
 	}
-
 	return webauthn.CreateCredential(user, session, parsedResponse)
 }
 
@@ -233,24 +228,25 @@ func (webauthn *WebAuthn) FinishRegistration(user User, session SessionData, req
 //
 // If you wish to skip performing the step required to parse the [*protocol.ParsedCredentialCreationData] and
 // you're using net/http then you can use [WebAuthn.FinishRegistration] instead.
-func (webauthn *WebAuthn) CreateCredential(user User, session SessionData, parsedResponse *protocol.ParsedCredentialCreationData) (credential *Credential, err error) {
+func (webauthn *WebAuthn) CreateCredential(user User, session SessionData, parsedResponse *protocol.ParsedCredentialCreationData) (*Credential, error) {
 	if !bytes.Equal(user.WebAuthnID(), session.UserID) {
 		return nil, protocol.ErrBadRequest.WithDetails("ID mismatch for User and Session")
 	}
-
 	if !session.Expires.IsZero() && session.Expires.Before(time.Now()) {
 		return nil, protocol.ErrBadRequest.WithDetails("Session has Expired")
 	}
 
 	shouldVerifyUser := session.UserVerification == protocol.VerificationRequired
 	shouldVerifyUserPresence := session.Mediation != protocol.MediationConditional
-
-	var clientDataHash []byte
-
-	if clientDataHash, err = parsedResponse.Verify(session.Challenge, shouldVerifyUser, shouldVerifyUserPresence, webauthn.Config.RPID, webauthn.Config.RPOrigins, webauthn.Config.RPTopOrigins, webauthn.Config.RPTopOriginVerificationMode, webauthn.Config.MDS, session.CredParams); err != nil {
+	// FIXME: the number of arguments here is ridiculous
+	clientDataHash, err := parsedResponse.Verify(
+		session.Challenge, shouldVerifyUser, shouldVerifyUserPresence,
+		webauthn.Config.RPID, webauthn.Config.RPOrigins, webauthn.Config.RPTopOrigins,
+		webauthn.Config.RPTopOriginVerificationMode, webauthn.Config.MDS, session.CredParams,
+	)
+	if err != nil {
 		return nil, err
 	}
-
 	return NewCredential(clientDataHash, parsedResponse)
 }
 
