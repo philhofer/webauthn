@@ -12,9 +12,8 @@ import (
 // New creates a new WebAuthn object given the proper Config.
 func New(config *Config) (*WebAuthn, error) {
 	if err := config.validate(); err != nil {
-		return nil, fmt.Errorf(errFmtConfigValidate, err)
+		return nil, errValidate(err)
 	}
-
 	return &WebAuthn{
 		config,
 	}, nil
@@ -103,7 +102,7 @@ func (config *Config) validate() (err error) {
 
 	if len(config.RPID) != 0 {
 		if _, err = url.Parse(config.RPID); err != nil {
-			return fmt.Errorf(errFmtFieldNotValidURI, "RPID", err)
+			return fmt.Errorf("field '%s' is not a valid URI: %w", "RPID", err)
 		}
 	}
 

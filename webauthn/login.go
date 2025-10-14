@@ -74,7 +74,7 @@ func (webauthn *WebAuthn) BeginDiscoverableMediatedLogin(mediation protocol.Cred
 
 func (webauthn *WebAuthn) beginLogin(userID []byte, allowedCredentials []protocol.CredentialDescriptor, mediation protocol.CredentialMediationRequirement, opts ...LoginOption) (assertion *protocol.CredentialAssertion, session *SessionData, err error) {
 	if err = webauthn.Config.validate(); err != nil {
-		return nil, nil, fmt.Errorf(errFmtConfigValidate, err)
+		return nil, nil, errValidate(err)
 	}
 
 	assertion = &protocol.CredentialAssertion{

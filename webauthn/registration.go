@@ -29,7 +29,7 @@ func (webauthn *WebAuthn) BeginRegistration(user User, opts ...RegistrationOptio
 // mediation requirement.
 func (webauthn *WebAuthn) BeginMediatedRegistration(user User, mediation protocol.CredentialMediationRequirement, opts ...RegistrationOption) (creation *protocol.CredentialCreation, session *SessionData, err error) {
 	if err = webauthn.Config.validate(); err != nil {
-		return nil, nil, fmt.Errorf(errFmtConfigValidate, err)
+		return nil, nil, errValidate(err)
 	}
 
 	challenge, err := protocol.CreateChallenge()

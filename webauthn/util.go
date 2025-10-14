@@ -1,15 +1,12 @@
 package webauthn
 
-import "bytes"
+import (
+	"bytes"
+	"slices"
+)
 
 func isByteArrayInSlice(needle []byte, haystack ...[]byte) (valid bool) {
-	for _, hay := range haystack {
-		if bytes.Equal(needle, hay) {
-			return true
-		}
-	}
-
-	return false
+	return slices.ContainsFunc(haystack, func(b []byte) bool { return bytes.Equal(b, needle) })
 }
 
 func isCredentialsAllowedMatchingOwned(allowedCredentialIDs [][]byte, credentials []Credential) (valid bool) {

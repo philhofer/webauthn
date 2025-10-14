@@ -1,13 +1,13 @@
 package webauthn
 
 import (
+	"fmt"
 	"time"
 )
 
-const (
-	errFmtFieldNotValidURI = "field '%s' is not a valid URI: %w"
-	errFmtConfigValidate   = "error occurred validating the configuration: %w"
-)
+func errValidate(err error) error {
+	return fmt.Errorf("error occurred validating the configuration: %w", err)
+}
 
 const (
 	defaultTimeoutUVD = time.Millisecond * 120000
