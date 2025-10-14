@@ -4,13 +4,32 @@ import (
 	"bytes"
 	"encoding/base64"
 	"io"
+	"reflect"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/go-webauthn/webauthn/protocol/webauthncbor"
 )
+
+func noerr(t *testing.T, err error) {
+	if err != nil {
+		t.Helper()
+		t.Fatal(err)
+	}
+}
+
+func musteq[T any](t *testing.T, got, want T) {
+	if !reflect.DeepEqual(got, want) {
+		t.Helper()
+		t.Fatalf("got %+v want %+v", got, want)
+	}
+}
+
+func musterr(t *testing.T, err error, text string) {
+	if err.Error() != text {
+		t.Helper()
+		t.Fatalf("got %q want %q", err.Error(), text)
+	}
+}
 
 func TestParseCredentialRequestResponse(t *testing.T) {
 	byteID, _ := base64.RawURLEncoding.DecodeString("AI7D5q2P0LS-Fal9ZT7CHM2N5BLbUunF92T8b6iYC199bO2kagSuU05-5dZGqb1SP0A0lyTWng")
@@ -116,34 +135,33 @@ func TestParseCredentialRequestResponse(t *testing.T) {
 			actual, err := ParseCredentialRequestResponseBody(body)
 
 			if tc.errString != "" {
-				assert.EqualError(t, err, tc.errString)
-
+				musterr(t, err, tc.errString)
 				AssertIsProtocolError(t, err, tc.errType, tc.errDetails, tc.errInfo)
 
 				return
 			}
+			noerr(t, err)
 
-			require.NoError(t, err)
+			musteq(t, tc.expected.ClientExtensionResults, actual.ClientExtensionResults)
+			musteq(t, tc.expected.ID, actual.ID)
+			musteq(t, tc.expected.ParsedCredential, actual.ParsedCredential)
+			musteq(t, tc.expected.ParsedPublicKeyCredential, actual.ParsedPublicKeyCredential)
+			musteq(t, tc.expected.Raw, actual.Raw)
+			musteq(t, tc.expected.RawID, actual.RawID)
 
-			assert.Equal(t, tc.expected.ClientExtensionResults, actual.ClientExtensionResults)
-			assert.Equal(t, tc.expected.ID, actual.ID)
-			assert.Equal(t, tc.expected.ParsedCredential, actual.ParsedCredential)
-			assert.Equal(t, tc.expected.ParsedPublicKeyCredential, actual.ParsedPublicKeyCredential)
-			assert.Equal(t, tc.expected.Raw, actual.Raw)
-			assert.Equal(t, tc.expected.RawID, actual.RawID)
-
-			assert.Equal(t, tc.expected.Response.CollectedClientData, actual.Response.CollectedClientData)
+			musteq(t, tc.expected.Response.CollectedClientData, actual.Response.CollectedClientData)
 
 			var (
 				pkExpected, pkActual any
 			)
 
-			assert.NoError(t, webauthncbor.Unmarshal(tc.expected.Response.AuthenticatorData.AttData.CredentialPublicKey, &pkExpected))
-			assert.NoError(t, webauthncbor.Unmarshal(actual.Response.AuthenticatorData.AttData.CredentialPublicKey, &pkActual))
+			noerr(t, webauthncbor.Unmarshal(tc.expected.Response.AuthenticatorData.AttData.CredentialPublicKey, &pkExpected))
+			noerr(t, webauthncbor.Unmarshal(actual.Response.AuthenticatorData.AttData.CredentialPublicKey, &pkActual))
 
-			assert.Equal(t, pkExpected, pkActual)
-			assert.NotEqual(t, nil, pkExpected)
-			assert.NotEqual(t, nil, pkActual)
+			musteq(t, pkExpected, pkActual)
+			if pkExpected == nil || pkActual == nil {
+				t.Errorf("pkExpected=%v pkActual=%v", pkExpected, pkActual)
+			}
 		})
 	}
 }

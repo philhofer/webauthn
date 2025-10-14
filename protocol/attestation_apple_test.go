@@ -4,8 +4,6 @@ import (
 	"crypto/sha256"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/go-webauthn/webauthn/metadata"
 )
 
@@ -42,15 +40,9 @@ func Test_VerifyAppleFormat(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			attestationType, x5cs, err := attestationFormatValidationHandlerAppleAnonymous(tc.args.att, tc.args.clientDataHash, nil)
-
-			assert.Equal(t, tc.attestationType, attestationType)
-			assert.Equal(t, tc.x5cs, x5cs)
-
-			if tc.err != "" {
-				assert.EqualError(t, err, tc.err)
-			} else {
-				assert.NoError(t, err)
-			}
+			musteq(t, tc.attestationType, attestationType)
+			musteq(t, tc.x5cs, x5cs)
+			errlike(t, err, tc.err)
 		})
 	}
 }

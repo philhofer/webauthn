@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
 	"github.com/go-webauthn/webauthn/metadata"
@@ -98,15 +97,9 @@ func TestVerifyAndroidKeyFormat(t *testing.T) {
 
 				attestationType, x5cs, err = attestationFormatValidationHandlerAndroidKey(tc.args.att, tc.args.clientDataHash, nil)
 			}
-
-			if tc.err != "" {
-				assert.EqualError(t, err, tc.err)
-			} else {
-				assert.NoError(t, err)
-			}
-
-			assert.Equal(t, tc.expected, attestationType)
-			assert.Equal(t, tc.x5cs, x5cs)
+			errlike(t, err, tc.err)
+			musteq(t, tc.expected, attestationType)
+			musteq(t, tc.x5cs, x5cs)
 		})
 	}
 }

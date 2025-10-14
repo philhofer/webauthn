@@ -6,9 +6,6 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestBase64UnmarshalJSON(t *testing.T) {
@@ -43,9 +40,9 @@ func TestBase64UnmarshalJSON(t *testing.T) {
 
 		t.Logf("%s\n", raw)
 
-		require.NoError(t, json.NewDecoder(strings.NewReader(raw)).Decode(&got))
+		noerr(t, json.NewDecoder(strings.NewReader(raw)).Decode(&got))
 
-		assert.Equal(t, test.expectedTestData.EncodedData, got.EncodedData)
-		assert.Equal(t, test.expectedTestData.StringData, got.StringData)
+		musteq(t, test.expectedTestData.EncodedData, got.EncodedData)
+		musteq(t, test.expectedTestData.StringData, got.StringData)
 	}
 }

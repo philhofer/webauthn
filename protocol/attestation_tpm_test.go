@@ -14,15 +14,31 @@ import (
 	"errors"
 	"math"
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/google/go-tpm/legacy/tpm2"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/go-webauthn/webauthn/protocol/webauthncbor"
 	"github.com/go-webauthn/webauthn/protocol/webauthncose"
 )
+
+func errlike(t *testing.T, err error, want string) {
+	t.Helper()
+	if want == "" {
+		if err != nil {
+			t.Fatal(err)
+		}
+		return
+	}
+	if err == nil {
+		t.Helper()
+		t.Fatalf("wanted an error like %q but got nil", want)
+	}
+	if !strings.Contains(err.Error(), want) {
+		t.Fatalf("%q doesn't contain %q", err.Error(), want)
+	}
+}
 
 func TestTPMAttestationVerificationSuccess(t *testing.T) {
 	for i := range testAttestationTPMResponses {
@@ -31,13 +47,10 @@ func TestTPMAttestationVerificationSuccess(t *testing.T) {
 			clientDataHash := sha256.Sum256(pcc.Raw.AttestationResponse.ClientDataJSON)
 
 			attestationType, _, err := attestationFormatValidationHandlerTPM(pcc.Response.AttestationObject, clientDataHash[:], nil)
-			require.NoError(t, err)
-
 			if err != nil {
 				t.Fatalf("Not valid: %+v", err)
 			}
-
-			assert.Equal(t, "attca", attestationType)
+			musteq(t, "attca", attestationType)
 		})
 	}
 }
@@ -77,8 +90,8 @@ var testAttestationTPMResponses = []string{
 
 func TestTPMAttestationVerificationFailAttStatement(t *testing.T) {
 	tests := []struct {
-		name    string
-		att     AttestationObject
+		name            string
+		att             AttestationObject
 		attestationType string
 		x5cs            []any
 		err             string
@@ -157,14 +170,12 @@ func TestTPMAttestationVerificationFailAttStatement(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			attestationType, x5cs, err := attestationFormatValidationHandlerTPM(tc.att, nil, nil)
-
-			assert.Equal(t, tc.attestationType, attestationType)
-			assert.Equal(t, tc.x5cs, x5cs)
-
+			musteq(t, tc.attestationType, attestationType)
+			musteq(t, tc.x5cs, x5cs)
 			if tc.err != "" {
-				assert.EqualError(t, err, tc.err)
+				musterr(t, err, tc.err)
 			} else {
-				assert.NoError(t, err)
+				noerr(t, err)
 			}
 		})
 	}
@@ -313,9 +324,9 @@ func TestTPMAttestationVerificationFailPubArea(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	require.GreaterOrEqual(t, rsaKey.E, 0)
-	require.LessOrEqual(t, rsaKey.E, 4294967295)
+	if rsaKey.E < 0 || rsaKey.E > math.MaxUint32 {
+		t.Fatalf("E = %d?", rsaKey.E)
+	}
 
 	e := uint32(rsaKey.E) //nolint:gosec
 
@@ -409,10 +420,9 @@ func TestTPMAttestationVerificationFailPubArea(t *testing.T) {
 		}
 
 		attestationType, _, err := attestationFormatValidationHandlerTPM(att, nil, nil)
-		if tt.wantErr != "" {
-			assert.Contains(t, err.Error(), tt.wantErr)
-		} else {
-			assert.Equal(t, "attca", attestationType)
+		errlike(t, err, tt.wantErr)
+		if err == nil {
+			musteq(t, "attca", attestationType)
 		}
 	}
 }
@@ -425,10 +435,9 @@ func TestTPMAttestationVerificationFailCertInfo(t *testing.T) {
 	}
 
 	rsaKey, _ := rsa.GenerateKey(rand.Reader, 2048)
-
-	require.GreaterOrEqual(t, rsaKey.E, 0)
-	require.LessOrEqual(t, rsaKey.E, 4294967295)
-
+	if rsaKey.E < 0 || rsaKey.E > math.MaxUint32 {
+		t.Fatalf("E = %d?", rsaKey.E)
+	}
 	e := uint32(rsaKey.E) //nolint:gosec
 
 	r := webauthncose.RSAPublicKeyData{
@@ -502,11 +511,9 @@ func TestTPMAttestationVerificationFailCertInfo(t *testing.T) {
 
 		att.AttStatement[stmtCertInfo] = certInfo
 		attestationType, _, err := attestationFormatValidationHandlerTPM(att, nil, nil)
-
-		if tt.wantErr != "" {
-			assert.Contains(t, err.Error(), tt.wantErr)
-		} else {
-			assert.Equal(t, "attca", attestationType)
+		errlike(t, err, tt.wantErr)
+		if err == nil {
+			musteq(t, "attca", attestationType)
 		}
 	}
 }
@@ -544,10 +551,9 @@ func TestTPMAttestationVerificationFailX5c(t *testing.T) {
 	}
 
 	rsaKey, _ := rsa.GenerateKey(rand.Reader, 2048)
-
-	require.GreaterOrEqual(t, rsaKey.E, 0)
-	require.LessOrEqual(t, rsaKey.E, 4294967295)
-
+	if rsaKey.E < 0 || rsaKey.E > math.MaxUint32 {
+		t.Fatalf("E = %d?", rsaKey.E)
+	}
 	e := uint32(rsaKey.E) //nolint:gosec
 
 	r := webauthncose.RSAPublicKeyData{
@@ -624,11 +630,9 @@ func TestTPMAttestationVerificationFailX5c(t *testing.T) {
 	for _, tt := range tests {
 		att.AttStatement[stmtX5C] = tt.x5c
 		attestationType, _, err := attestationFormatValidationHandlerTPM(att, nil, nil)
-
-		if tt.wantErr != "" {
-			assert.Contains(t, err.Error(), tt.wantErr)
-		} else {
-			assert.Equal(t, "attca", attestationType)
+		errlike(t, err, tt.wantErr)
+		if err == nil {
+			musteq(t, "attca", attestationType)
 		}
 	}
 }

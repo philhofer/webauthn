@@ -7,9 +7,6 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -275,15 +272,10 @@ func TestAuthenticatorData_Unmarshal(t *testing.T) {
 			}
 
 			err := a.Unmarshal(tt.args.rawAuthData)
-			if tt.errString != "" {
-				assert.EqualError(t, err, tt.errString)
-
+			errlike(t, err, tt.errString)
+			if err != nil {
 				AssertIsProtocolError(t, err, tt.errType, tt.errDetails, tt.errInfo)
-
-				return
 			}
-
-			require.NoError(t, err)
 		})
 	}
 }
@@ -390,15 +382,10 @@ func TestAuthenticatorData_unmarshalAttestedData(t *testing.T) {
 			}
 
 			err := a.unmarshalAttestedData(tt.args.rawAuthData)
+			errlike(t, err, tt.errString)
 			if tt.errString != "" {
-				assert.EqualError(t, err, tt.errString)
-
 				AssertIsProtocolError(t, err, tt.errType, tt.errDetails, tt.errInfo)
-
-				return
 			}
-
-			require.NoError(t, err)
 		})
 	}
 }
@@ -520,15 +507,10 @@ func TestAuthenticatorData_Verify(t *testing.T) {
 			}
 
 			err := a.Verify(tt.args.rpIdHash, nil, tt.args.userVerificationRequired, tt.args.userPresenceRequired)
+			errlike(t, err, tt.errString)
 			if tt.errString != "" {
-				assert.EqualError(t, err, tt.errString)
-
 				AssertIsProtocolError(t, err, tt.errType, tt.errDetails, tt.errInfo)
-
-				return
 			}
-
-			require.NoError(t, err)
 		})
 	}
 }

@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
-
-	"github.com/stretchr/testify/require"
 )
 
 func TestAttestationVerify(t *testing.T) {
@@ -14,11 +12,11 @@ func TestAttestationVerify(t *testing.T) {
 		t.Run(fmt.Sprintf("Running test %d", i), func(t *testing.T) {
 			options := CredentialCreation{}
 
-			require.NoError(t, json.Unmarshal([]byte(testAttestationOptions[i]), &options))
+			noerr(t, json.Unmarshal([]byte(testAttestationOptions[i]), &options))
 
 			ccr := CredentialCreationResponse{}
 
-			require.NoError(t, json.Unmarshal([]byte(testAttestationResponses[i]), &ccr))
+			noerr(t, json.Unmarshal([]byte(testAttestationResponses[i]), &ccr))
 
 			var pcc ParsedCredentialCreationData
 
@@ -26,13 +24,13 @@ func TestAttestationVerify(t *testing.T) {
 			pcc.Raw = ccr
 
 			parsedAttestationResponse, err := ccr.AttestationResponse.Parse()
-			require.NoError(t, err)
+			noerr(t, err)
 
 			pcc.Response = *parsedAttestationResponse
 
 			_, err = pcc.Verify(options.Response.Challenge.String(), false, false, options.Response.RelyingParty.ID, []string{options.Response.RelyingParty.Name}, nil, TopOriginIgnoreVerificationMode, nil, options.Response.Parameters)
 
-			require.NoError(t, err)
+			noerr(t, err)
 		})
 	}
 }
@@ -40,13 +38,13 @@ func TestAttestationVerify(t *testing.T) {
 func attestationTestUnpackResponse(t *testing.T, response string) (pcc ParsedCredentialCreationData) {
 	ccr := CredentialCreationResponse{}
 
-	require.NoError(t, json.Unmarshal([]byte(response), &ccr))
+	noerr(t, json.Unmarshal([]byte(response), &ccr))
 
 	pcc.ID, pcc.RawID, pcc.Type, pcc.ClientExtensionResults = ccr.ID, ccr.RawID, ccr.Type, ccr.ClientExtensionResults
 	pcc.Raw = ccr
 
 	parsedAttestationResponse, err := ccr.AttestationResponse.Parse()
-	require.NoError(t, err)
+	noerr(t, err)
 
 	pcc.Response = *parsedAttestationResponse
 
@@ -61,7 +59,7 @@ func TestPackedAttestationVerification(t *testing.T) {
 		clientDataHash := sha256.Sum256(pcc.Raw.AttestationResponse.ClientDataJSON)
 
 		_, _, err := attestationFormatValidationHandlerPacked(pcc.Response.AttestationObject, clientDataHash[:], nil)
-		require.NoError(t, err)
+		noerr(t, err)
 	})
 }
 
