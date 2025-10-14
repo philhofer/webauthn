@@ -4,10 +4,7 @@ import (
 	"crypto/sha256"
 	"testing"
 
-	"go.uber.org/mock/gomock"
-
 	"github.com/go-webauthn/webauthn/metadata"
-	"github.com/go-webauthn/webauthn/testing/mocks"
 )
 
 func TestVerifyAndroidKeyFormat(t *testing.T) {
@@ -25,7 +22,6 @@ func TestVerifyAndroidKeyFormat(t *testing.T) {
 
 	testCases := []struct {
 		name     string
-		setup    func(t *testing.T, mds *mocks.MockMetadataProvider)
 		mds      bool
 		args     args
 		expected string
@@ -34,7 +30,6 @@ func TestVerifyAndroidKeyFormat(t *testing.T) {
 	}{
 		{
 			"ShouldHandleSuccessfulAttestationResponse0",
-			nil,
 			false,
 			args{
 				successAttResponse0,
@@ -46,7 +41,6 @@ func TestVerifyAndroidKeyFormat(t *testing.T) {
 		},
 		{
 			"ShouldHandleSuccessfulAttestationResponse1",
-			nil,
 			false,
 			args{
 				successAttResponse1,
@@ -58,7 +52,6 @@ func TestVerifyAndroidKeyFormat(t *testing.T) {
 		},
 		{
 			"ShouldHandleSuccessfulAttestationResponse2",
-			nil,
 			false,
 			args{
 				successAttResponse2,
@@ -79,22 +72,8 @@ func TestVerifyAndroidKeyFormat(t *testing.T) {
 			)
 
 			if tc.mds {
-				var mds *mocks.MockMetadataProvider
-
-				ctrl := gomock.NewController(t)
-
-				mds = mocks.NewMockMetadataProvider(ctrl)
-
-				if tc.setup != nil {
-					tc.setup(t, mds)
-				}
-
-				attestationType, x5cs, err = attestationFormatValidationHandlerAndroidKey(tc.args.att, tc.args.clientDataHash, mds)
+				attestationType, x5cs, err = attestationFormatValidationHandlerAndroidKey(tc.args.att, tc.args.clientDataHash, nil)
 			} else {
-				if tc.setup != nil {
-					tc.setup(t, nil)
-				}
-
 				attestationType, x5cs, err = attestationFormatValidationHandlerAndroidKey(tc.args.att, tc.args.clientDataHash, nil)
 			}
 			errlike(t, err, tc.err)

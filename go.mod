@@ -11,7 +11,6 @@ require (
 	github.com/google/go-tpm v0.9.6
 	github.com/google/uuid v1.6.0
 	github.com/mitchellh/mapstructure v1.5.0
-	go.uber.org/mock v0.6.0
 )
 
 require (
