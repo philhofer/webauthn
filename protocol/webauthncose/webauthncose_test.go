@@ -6,8 +6,6 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/go-webauthn/webauthn/protocol/webauthncbor"
 )
 
@@ -71,9 +69,13 @@ func TestP256SignatureVerification(t *testing.T) {
 	// NIST CURVE: P-256
 	// ----.
 	pubX, err := hex.DecodeString("f739f8c77b32f4d5f13265861febd76e7a9c61a1140d296b8c16302508870316")
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	pubY, err := hex.DecodeString("c24970ad7811ccd9da7f1b88f202bebac770663ef58ba68346186dd778200dd4")
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	key := EC2PublicKeyData{
 		// These constants are from https://datatracker.ietf.org/doc/rfc9053/
@@ -92,17 +94,27 @@ func TestP256SignatureVerification(t *testing.T) {
 	// Valid signature obtained with:
 	// $ echo -n 'webauthnFTW' | openssl dgst -sha256 -sign private_key.pem | xxd -ps | tr -d '\n'.
 	validSig, err := hex.DecodeString("3045022053584980793ee4ec01d583f303604c4f85a7e87df3fe9551962c5ab69a5ce27b022100c801fd6186ca4681e87fbbb97c5cb659f039473995a75a9a9dffea2708d6f8fb")
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Happy path, verification should succeed.
 	ok, err := VerifySignature(key, data, validSig)
-	assert.True(t, ok, "invalid EC signature")
-	assert.Nil(t, err, "error verifying EC signature")
+	if err != nil {
+		t.Fatalf("error verifying signature: %s", err)
+	}
+	if !ok {
+		t.Fatal("invalid EC signature")
+	}
 
 	// Verification against BAD data should fail.
 	ok, err = VerifySignature(key, []byte("webauthnFTL"), validSig)
-	assert.Nil(t, err, "error verifying EC signature")
-	assert.False(t, ok, "verification against bad data is successful!")
+	if err != nil {
+		t.Fatalf("error verifying signature: %s", err)
+	}
+	if ok {
+		t.Fatal("verification against bad input?")
+	}
 }
 
 func TestOKPDisplayPublicKey(t *testing.T) {
@@ -195,13 +207,22 @@ func TestRSAExponent(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			actual, err := parseRSAPublicKeyDataExponent(tc.have)
-
 			if tc.err != "" {
-				assert.EqualError(t, err, tc.err)
-				assert.Equal(t, 0, actual)
+				if err == nil {
+					t.Fatal("no error?")
+				} else if err.Error() != tc.err {
+					t.Fatalf("got err %q", err.Error())
+				}
+				if actual != 0 {
+					t.Fatalf("actual = %d", actual)
+				}
 			} else {
-				assert.Equal(t, tc.expected, actual)
-				assert.NoError(t, err)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if tc.expected != actual {
+					t.Errorf("expected=%d, actual=%d", tc.expected, actual)
+				}
 			}
 		})
 	}

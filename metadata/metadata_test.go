@@ -6,33 +6,48 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"reflect"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/go-webauthn/webauthn/protocol/webauthncose"
 )
 
+func noerr(t *testing.T, err error) {
+	if err != nil {
+		t.Helper()
+		t.Fatal(err)
+	}
+}
+
+func musteq[T any](t *testing.T, a, b T) {
+	if !reflect.DeepEqual(a, b) {
+		t.Helper()
+		t.Fatalf("%+v != %+v", a, b)
+	}
+}
+
 func TestProductionMetadataTOCParsing(t *testing.T) {
 	decoder, err := NewDecoder(WithIgnoreEntryParsingErrors())
-	require.NoError(t, err)
+	noerr(t, err)
 
 	client := &http.Client{}
 
 	res, err := client.Get(ProductionMDSURL)
-	require.NoError(t, err)
+	noerr(t, err)
 
 	payload, err := decoder.Decode(res.Body)
-	require.NoError(t, err)
+	noerr(t, err)
 
 	var metadata *Metadata
 
 	metadata, err = decoder.Parse(payload)
-	require.NoError(t, err)
-	require.NotNil(t, metadata)
+	noerr(t, err)
+	if metadata == nil {
+		t.Fatal("metadata is nil w/o an error?")
+	}
 }
 
 func TestConformanceMetadataTOCParsing(t *testing.T) {
@@ -71,11 +86,11 @@ func TestConformanceMetadataTOCParsing(t *testing.T) {
 	}
 
 	endpoints, err := getEndpoints(client)
-	require.NoError(t, err)
+	noerr(t, err)
 
 	decoder, err := NewDecoder(WithRootCertificate(ConformanceMDSRoot))
 
-	require.NoError(t, err)
+	noerr(t, err)
 
 	metadata := make(map[uuid.UUID]EntryJSON)
 
@@ -87,7 +102,7 @@ func TestConformanceMetadataTOCParsing(t *testing.T) {
 
 	for _, endpoint := range endpoints {
 		res, err = client.Get(endpoint)
-		require.NoError(t, err)
+		noerr(t, err)
 
 		if blob, err = decoder.Decode(res.Body); err != nil {
 			if errors.As(err, &me) {
@@ -106,7 +121,7 @@ func TestConformanceMetadataTOCParsing(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			statement, err := getTestMetadata(tc.name, client)
-			require.NoError(t, err)
+			noerr(t, err)
 
 			aaguid, _ := uuid.Parse(statement.AaGUID)
 			if meta, ok := metadata[aaguid]; ok {
@@ -117,13 +132,12 @@ func TestConformanceMetadataTOCParsing(t *testing.T) {
 						pass = false
 					}
 				}
-
-				assert.Equal(t, tc.pass, pass, "One or more status reports had an undesired status but this was not expected.")
+				musteq(t, tc.pass, pass)
 
 				_, err := meta.Parse()
-				assert.NoError(t, err, "Failed to parse metadata")
-			} else {
-				assert.False(t, tc.pass)
+				noerr(t, err)
+			} else if tc.pass {
+				t.Fatal("case should have passed...?")
 			}
 		})
 	}
@@ -138,14 +152,14 @@ func TestExampleMetadataTOCParsing(t *testing.T) {
 
 	decoder, err := NewDecoder(WithIgnoreEntryParsingErrors(), WithRootCertificate(ExampleMDSRoot))
 
-	require.NoError(t, err)
+	noerr(t, err)
 
 	payload, err := decoder.DecodeBytes(exampleMetadataBLOBBytes.Bytes())
-	require.NoError(t, err)
+	noerr(t, err)
 
 	_, err = decoder.Parse(payload)
 
-	require.NoError(t, err)
+	noerr(t, err)
 }
 
 func TestIsUndesiredAuthenticatorStatus(t *testing.T) {
