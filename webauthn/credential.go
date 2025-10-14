@@ -40,14 +40,12 @@ type Credential struct {
 type Credentials []Credential
 
 // CredentialDescriptors returns the []protocol.CredentialDescriptor for this Credentials type.
-func (c Credentials) CredentialDescriptors() (descriptors []protocol.CredentialDescriptor) {
-	descriptors = make([]protocol.CredentialDescriptor, len(c))
-
+func (c Credentials) CredentialDescriptors() []protocol.CredentialDescriptor {
+	ret := make([]protocol.CredentialDescriptor, len(c))
 	for i, credential := range c {
-		descriptors[i] = credential.Descriptor()
+		ret[i] = credential.Descriptor()
 	}
-
-	return descriptors
+	return ret
 }
 
 // NewCredentialFlags is a utility function that is used to derive the Credential's Flags field. This allows
@@ -95,7 +93,7 @@ type CredentialAttestation struct {
 }
 
 // Descriptor converts a Credential into a protocol.CredentialDescriptor.
-func (c Credential) Descriptor() (descriptor protocol.CredentialDescriptor) {
+func (c Credential) Descriptor() protocol.CredentialDescriptor {
 	return protocol.CredentialDescriptor{
 		Type:            protocol.PublicKeyCredentialType,
 		CredentialID:    c.ID,
@@ -105,8 +103,10 @@ func (c Credential) Descriptor() (descriptor protocol.CredentialDescriptor) {
 }
 
 // NewCredential will return a credential pointer on successful validation of a registration response.
-func NewCredential(clientDataHash []byte, c *protocol.ParsedCredentialCreationData) (credential *Credential, err error) {
-	credential = &Credential{
+//
+// FIXME: the doc comment above is wrong. No validation is performed.
+func NewCredential(clientDataHash []byte, c *protocol.ParsedCredentialCreationData) (*Credential, error) {
+	return &Credential{
 		ID:              c.Response.AttestationObject.AuthData.AttData.CredentialID,
 		PublicKey:       c.Response.AttestationObject.AuthData.AttData.CredentialPublicKey,
 		AttestationType: c.Response.AttestationObject.Format,
@@ -124,17 +124,14 @@ func NewCredential(clientDataHash []byte, c *protocol.ParsedCredentialCreationDa
 			PublicKeyAlgorithm: c.Raw.AttestationResponse.PublicKeyAlgorithm,
 			Object:             c.Raw.AttestationResponse.AttestationObject,
 		},
-	}
-
-	return credential, nil
+	}, nil
 }
 
 // Verify this credentials against the metadata.Provider given.
-func (c Credential) Verify(mds metadata.Provider) (err error) {
+func (c Credential) Verify(mds metadata.Provider) error {
 	if mds == nil {
 		return fmt.Errorf("error verifying credential: the metadata provider must be provided but it's nil")
 	}
-
 	raw := &protocol.AuthenticatorAttestationResponse{
 		AuthenticatorResponse: protocol.AuthenticatorResponse{
 			ClientDataJSON: c.Attestation.ClientDataJSON,
@@ -145,28 +142,21 @@ func (c Credential) Verify(mds metadata.Provider) (err error) {
 		PublicKeyAlgorithm: c.Attestation.PublicKeyAlgorithm,
 		AttestationObject:  c.Attestation.Object,
 	}
-
 	for i, transport := range c.Transport {
 		raw.Transports[i] = string(transport)
 	}
-
-	var attestation *protocol.ParsedAttestationResponse
-
-	if attestation, err = raw.Parse(); err != nil {
+	attestation, err := raw.Parse()
+	if err != nil {
 		return fmt.Errorf("error verifying credential: error parsing attestation: %w", err)
 	}
-
 	clientDataHash := c.Attestation.ClientDataHash
-
 	if len(clientDataHash) == 0 {
 		sum := sha256.Sum256(c.Attestation.ClientDataJSON)
-
 		clientDataHash = sum[:]
 	}
-
-	if err = attestation.AttestationObject.VerifyAttestation(clientDataHash, mds); err != nil {
+	err = attestation.AttestationObject.VerifyAttestation(clientDataHash, mds)
+	if err != nil {
 		return fmt.Errorf("error verifying credential: error verifying attestation: %w", err)
 	}
-
 	return nil
 }
