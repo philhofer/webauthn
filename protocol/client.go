@@ -4,6 +4,7 @@ import (
 	"crypto/subtle"
 	"fmt"
 	"net/url"
+	"slices"
 	"strings"
 )
 
@@ -219,36 +220,22 @@ const (
 // See (Well-Known Uniform Resource Identifiers): https://datatracker.ietf.org/doc/html/rfc8615
 func IsOriginInHaystack(needle string, haystack []string) bool {
 	needleURI := parseOriginURI(needle)
-
 	if needleURI != nil {
-		for _, hay := range haystack {
+		return slices.ContainsFunc(haystack, func(hay string) bool {
 			if hayURI := parseOriginURI(hay); hayURI != nil {
 				if isOriginEqual(needleURI, hayURI) {
 					return true
 				}
 			}
-		}
-	} else {
-		for _, hay := range haystack {
-			if needle == hay {
-				return true
-			}
-		}
+			return false
+		})
 	}
-
-	return false
+	return slices.Contains(haystack, needle)
 }
 
 func isOriginEqual(a *url.URL, b *url.URL) bool {
-	if !strings.EqualFold(a.Scheme, b.Scheme) {
-		return false
-	}
-
-	if !strings.EqualFold(a.Host, b.Host) {
-		return false
-	}
-
-	return true
+	return strings.EqualFold(a.Scheme, b.Scheme) &&
+		strings.EqualFold(a.Host, b.Host)
 }
 
 func parseOriginURI(raw string) *url.URL {

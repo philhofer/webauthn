@@ -9,12 +9,11 @@ const ChallengeLength = 32
 
 // CreateChallenge creates a new challenge that should be signed and returned by the authenticator. The spec recommends
 // using at least 16 bytes with 100 bits of entropy. We use 32 bytes.
-func CreateChallenge() (challenge URLEncodedBase64, err error) {
-	challenge = make([]byte, ChallengeLength)
-
-	if _, err = rand.Read(challenge); err != nil {
-		return nil, err
+func CreateChallenge() (URLEncodedBase64, error) {
+	challenge := make([]byte, ChallengeLength)
+	_, err := rand.Read(challenge)
+	if err != nil {
+		return nil, err // technically can't happen...
 	}
-
 	return challenge, nil
 }
