@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -214,14 +215,12 @@ func WithChallenge(challenge []byte) LoginOption {
 // [io.Reader] or byte array respectively, you can also use an arbitrary [*protocol.ParsedCredentialAssertionData] which is
 // returned from all of these functions i.e. by implementing a custom parser. The [*SessionData],
 // and [*protocol.ParsedCredentialAssertionData] can then be used with the [WebAuthn.ValidateLogin] function.
-func (webauthn *WebAuthn) FinishLogin(user User, session SessionData, response *http.Request) (credential *Credential, err error) {
-	var parsedResponse *protocol.ParsedCredentialAssertionData
-
-	if parsedResponse, err = protocol.ParseCredentialRequestResponse(response); err != nil {
+func (webauthn *WebAuthn) FinishLogin(user User, session SessionData, response *http.Request) (*Credential, error) {
+	res, err := protocol.ParseCredentialRequestResponse(response)
+	if err != nil {
 		return nil, err
 	}
-
-	return webauthn.ValidateLogin(user, session, parsedResponse)
+	return webauthn.ValidateLogin(user, session, res)
 }
 
 // FinishDiscoverableLogin takes the response from the client and validates it against the handler and stored session data.
@@ -233,14 +232,12 @@ func (webauthn *WebAuthn) FinishLogin(user User, session SessionData, response *
 // [io.Reader] or byte array respectively, you can also use an arbitrary [*protocol.ParsedCredentialAssertionData] which is
 // returned from all of these functions i.e. by implementing a custom parser. The [DiscoverableUserHandler], [*SessionData],
 // and [*protocol.ParsedCredentialAssertionData] can then be used with the [WebAuthn.ValidatePasskeyLogin] function.
-func (webauthn *WebAuthn) FinishDiscoverableLogin(handler DiscoverableUserHandler, session SessionData, response *http.Request) (credential *Credential, err error) {
-	var parsedResponse *protocol.ParsedCredentialAssertionData
-
-	if parsedResponse, err = protocol.ParseCredentialRequestResponse(response); err != nil {
+func (webauthn *WebAuthn) FinishDiscoverableLogin(handler DiscoverableUserHandler, session SessionData, response *http.Request) (*Credential, error) {
+	res, err := protocol.ParseCredentialRequestResponse(response)
+	if err != nil {
 		return nil, err
 	}
-
-	return webauthn.ValidateDiscoverableLogin(handler, session, parsedResponse)
+	return webauthn.ValidateDiscoverableLogin(handler, session, res)
 }
 
 // FinishPasskeyLogin takes the response from the client and validate it against the handler and stored session data.
@@ -252,29 +249,25 @@ func (webauthn *WebAuthn) FinishDiscoverableLogin(handler DiscoverableUserHandle
 // io.Reader or byte array respectively, you can also use an arbitrary [*protocol.ParsedCredentialAssertionData] which is
 // returned from all of these functions i.e. by implementing a custom parser. The [DiscoverableUserHandler], [*SessionData],
 // and [*protocol.ParsedCredentialAssertionData] can then be used with the [WebAuthn.ValidatePasskeyLogin] function.
-func (webauthn *WebAuthn) FinishPasskeyLogin(handler DiscoverableUserHandler, session SessionData, response *http.Request) (user User, credential *Credential, err error) {
-	var parsedResponse *protocol.ParsedCredentialAssertionData
-
-	if parsedResponse, err = protocol.ParseCredentialRequestResponse(response); err != nil {
+func (webauthn *WebAuthn) FinishPasskeyLogin(handler DiscoverableUserHandler, session SessionData, response *http.Request) (User, *Credential, error) {
+	res, err := protocol.ParseCredentialRequestResponse(response)
+	if err != nil {
 		return nil, nil, err
 	}
-
-	return webauthn.ValidatePasskeyLogin(handler, session, parsedResponse)
+	return webauthn.ValidatePasskeyLogin(handler, session, res)
 }
 
 // ValidateLogin takes a parsed response and validates it against the user credentials and session data.
 //
 // If you wish to skip performing the step required to parse the *protocol.ParsedCredentialAssertionData and
 // you're using net/http then you can use [WebAuthn.FinishLogin] instead.
-func (webauthn *WebAuthn) ValidateLogin(user User, session SessionData, parsedResponse *protocol.ParsedCredentialAssertionData) (credential *Credential, err error) {
+func (webauthn *WebAuthn) ValidateLogin(user User, session SessionData, parsedResponse *protocol.ParsedCredentialAssertionData) (*Credential, error) {
 	if !bytes.Equal(user.WebAuthnID(), session.UserID) {
 		return nil, protocol.ErrBadRequest.WithDetails("ID mismatch for User and Session")
 	}
-
 	if !session.Expires.IsZero() && session.Expires.Before(time.Now()) {
 		return nil, protocol.ErrBadRequest.WithDetails("Session has Expired")
 	}
-
 	return webauthn.validateLogin(user, session, parsedResponse)
 }
 
@@ -285,9 +278,8 @@ func (webauthn *WebAuthn) ValidateLogin(user User, session SessionData, parsedRe
 // you're using net/http then you can use [WebAuthn.FinishDiscoverableLogin] instead.
 //
 // Note: this is just a backwards compatibility layer over [WebAuthn.ValidatePasskeyLogin] which returns more information.
-func (webauthn *WebAuthn) ValidateDiscoverableLogin(handler DiscoverableUserHandler, session SessionData, parsedResponse *protocol.ParsedCredentialAssertionData) (credential *Credential, err error) {
-	_, credential, err = webauthn.ValidatePasskeyLogin(handler, session, parsedResponse)
-
+func (webauthn *WebAuthn) ValidateDiscoverableLogin(handler DiscoverableUserHandler, session SessionData, parsedResponse *protocol.ParsedCredentialAssertionData) (*Credential, error) {
+	_, credential, err := webauthn.ValidatePasskeyLogin(handler, session, parsedResponse)
 	return credential, err
 }
 
@@ -295,23 +287,21 @@ func (webauthn *WebAuthn) ValidateDiscoverableLogin(handler DiscoverableUserHand
 //
 // If you wish to skip performing the step required to parse the [*protocol.ParsedCredentialAssertionData] and
 // you're using net/http then you can use [WebAuthn.FinishPasskeyLogin] instead.
-func (webauthn *WebAuthn) ValidatePasskeyLogin(handler DiscoverableUserHandler, session SessionData, parsedResponse *protocol.ParsedCredentialAssertionData) (user User, credential *Credential, err error) {
+func (webauthn *WebAuthn) ValidatePasskeyLogin(handler DiscoverableUserHandler, session SessionData, parsedResponse *protocol.ParsedCredentialAssertionData) (User, *Credential, error) {
 	if len(session.UserID) != 0 {
 		return nil, nil, protocol.ErrBadRequest.WithDetails("Session was not initiated as a client-side discoverable login")
 	}
-
 	if len(parsedResponse.Response.UserHandle) == 0 {
 		return nil, nil, protocol.ErrBadRequest.WithDetails("Client-side Discoverable Assertion was attempted with a blank User Handle")
 	}
-
-	if user, err = handler(parsedResponse.RawID, parsedResponse.Response.UserHandle); err != nil {
+	user, err := handler(parsedResponse.RawID, parsedResponse.Response.UserHandle)
+	if err != nil {
 		return nil, nil, protocol.ErrBadRequest.WithDetails(fmt.Sprintf("Failed to lookup Client-side Discoverable Credential: %s", err)).WithError(err)
 	}
-
-	if credential, err = webauthn.validateLogin(user, session, parsedResponse); err != nil {
+	credential, err := webauthn.validateLogin(user, session, parsedResponse)
+	if err != nil {
 		return nil, nil, err
 	}
-
 	return user, credential, nil
 }
 
@@ -346,42 +336,26 @@ func (webauthn *WebAuthn) validateLogin(user User, session SessionData, parsedRe
 		}
 	}
 
-	var (
-		found      bool
-		credential Credential
-	)
-
 	// Step 3. Using credential’s id attribute (or the corresponding rawId, if base64url encoding is inappropriate
 	// for your use case), look up the corresponding credential public key.
-	for _, credential = range credentials {
-		if bytes.Equal(credential.ID, parsedResponse.RawID) {
-			found = true
-
-			break
-		}
-
-		found = false
-	}
-
-	if !found {
+	cid := slices.IndexFunc(credentials, func(c Credential) bool {
+		return bytes.Equal(c.ID, parsedResponse.RawID)
+	})
+	if cid < 0 {
 		return nil, protocol.ErrBadRequest.WithDetails("Unable to find the credential for the returned credential ID")
 	}
-
-	var (
-		appID string
-		err   error
-	)
+	credential := credentials[cid]
 
 	// Ensure authenticators with a bad status are not used.
 	if webauthn.Config.MDS != nil {
 		var aaguid uuid.UUID
 
+		var err error
 		if len(credential.Authenticator.AAGUID) == 0 {
 			aaguid = uuid.Nil
 		} else if aaguid, err = uuid.FromBytes(credential.Authenticator.AAGUID); err != nil {
 			return nil, protocol.ErrBadRequest.WithDetails("Failed to decode AAGUID").WithInfo(fmt.Sprintf("Error occurred decoding AAGUID from the credential record: %s", err)).WithError(err)
 		}
-
 		if e := protocol.ValidateMetadata(context.Background(), webauthn.Config.MDS, aaguid, "", credential.AttestationType, nil); e != nil {
 			return nil, protocol.ErrBadRequest.WithDetails("Failed to validate credential record metadata").WithInfo(e.DevInfo).WithError(e)
 		}
@@ -394,7 +368,8 @@ func (webauthn *WebAuthn) validateLogin(user User, session SessionData, parsedRe
 	rpOrigins := webauthn.Config.RPOrigins
 	rpTopOrigins := webauthn.Config.RPTopOrigins
 
-	if appID, err = parsedResponse.GetAppID(session.Extensions, credential.AttestationType); err != nil {
+	appID, err := parsedResponse.GetAppID(session.Extensions, credential.AttestationType)
+	if err != nil {
 		return nil, err
 	}
 
