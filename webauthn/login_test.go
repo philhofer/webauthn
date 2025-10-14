@@ -6,10 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"reflect"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/go-webauthn/webauthn/protocol"
 )
@@ -116,8 +114,9 @@ func TestWithLoginRelyingPartyID(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			w, err := New(tc.have)
-			assert.NoError(t, err)
-
+			if err != nil {
+				t.Fatal(err)
+			}
 			user := &defaultUser{
 				credentials: []Credential{
 					{},
@@ -126,14 +125,22 @@ func TestWithLoginRelyingPartyID(t *testing.T) {
 
 			creation, _, err := w.BeginLogin(user, tc.opts...)
 			if tc.err != "" {
-				assert.EqualError(t, err, tc.err)
+				if str := err.Error(); str != tc.err {
+					t.Fatalf("got %q expected %q", str, tc.err)
+				}
 			} else {
-				assert.NoError(t, err)
-				require.NotNil(t, creation)
-				assert.Equal(t, tc.expectedID, creation.Response.RelyingPartyID)
-
+				if err != nil {
+					t.Fatal(err)
+				}
+				if tc.expectedID != creation.Response.RelyingPartyID {
+					t.Errorf("expected ID %q but got RPID %q", tc.expectedID, creation.Response.RelyingPartyID)
+				}
 				if len(tc.expectedChallenge) > 0 {
-					assert.Equal(t, protocol.URLEncodedBase64(tc.expectedChallenge).String(), creation.Response.Challenge.String())
+					got := creation.Response.Challenge.String()
+					want := protocol.URLEncodedBase64(tc.expectedChallenge).String()
+					if got != want {
+						t.Errorf("got challenge %q want %q", got, want)
+					}
 				}
 			}
 		})
@@ -197,6 +204,8 @@ func TestFinishLoginFailure(t *testing.T) {
 	httpReq := &http.Request{Body: reqBody}
 
 	_, err := webauthn.FinishLogin(user, session, httpReq)
-
-	require.Equal(t, err, protocol.ErrBadRequest.WithDetails("User does not own all credentials from the allowed credential list"))
+	wanterr := protocol.ErrBadRequest.WithDetails("User does not own all credentials from the allowed credential list")
+	if !reflect.DeepEqual(err, wanterr) {
+		t.Errorf("got err %+v want %+v", err, wanterr)
+	}
 }

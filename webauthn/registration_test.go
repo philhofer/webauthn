@@ -4,11 +4,36 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/go-webauthn/webauthn/protocol"
 )
+
+func noerr(t *testing.T, err error) {
+	t.Helper()
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func nonnil[T any](t *testing.T, v *T) {
+	if v == nil {
+		t.Helper()
+		t.Fatal("non-nil")
+	}
+}
+
+func errequal(t *testing.T, err error, text string) {
+	if err.Error() != text {
+		t.Helper()
+		t.Fatalf("got %q want %q", err.Error(), text)
+	}
+}
+
+func musteq[T comparable](t *testing.T, want, got T) {
+	if want != got {
+		t.Helper()
+		t.Fatalf("got %+v want +%v", got, want)
+	}
+}
 
 func TestWithRegistrationRelyingPartyID(t *testing.T) {
 	testCases := []struct {
@@ -81,18 +106,18 @@ func TestWithRegistrationRelyingPartyID(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			w, err := New(tc.have)
-			assert.NoError(t, err)
+			noerr(t, err)
 
 			user := &defaultUser{}
 
 			creation, _, err := w.BeginRegistration(user, tc.opts...)
 			if tc.err != "" {
-				assert.EqualError(t, err, tc.err)
+				errequal(t, err, tc.err)
 			} else {
-				assert.NoError(t, err)
-				require.NotNil(t, creation)
-				assert.Equal(t, tc.expectedID, creation.Response.RelyingParty.ID)
-				assert.Equal(t, tc.expectedName, creation.Response.RelyingParty.Name)
+				noerr(t, err)
+				nonnil(t, creation)
+				musteq(t, tc.expectedID, creation.Response.RelyingParty.ID)
+				musteq(t, tc.expectedName, creation.Response.RelyingParty.Name)
 			}
 		})
 	}
@@ -140,10 +165,8 @@ func TestEntityEncoding(t *testing.T) {
 			}
 
 			data, err := json.Marshal(entityUser)
-
-			assert.NoError(t, err)
-
-			assert.Equal(t, tc.expected, string(data))
+			noerr(t, err)
+			musteq(t, tc.expected, string(data))
 		})
 	}
 }

@@ -3,8 +3,6 @@ package webauthn
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/go-webauthn/webauthn/protocol"
 )
 
@@ -76,13 +74,14 @@ func TestNew(t *testing.T) {
 			w, err := New(tc.config)
 
 			if tc.err == "" {
-				assert.NotNil(t, w)
-				assert.NoError(t, err)
-				assert.NoError(t, tc.config.validate())
+				nonnil(t, w)
+				noerr(t, err)
+				noerr(t, tc.config.validate())
 			} else {
-				assert.Nil(t, w)
-				assert.EqualError(t, err, tc.err)
-				assert.Error(t, tc.config.validate())
+				errequal(t, err, tc.err)
+				if tc.config.validate() == nil {
+					t.Fatal("no error?")
+				}
 			}
 		})
 	}

@@ -2,8 +2,6 @@ package webauthn
 
 import (
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestIsByteArrayInSlice(t *testing.T) {
@@ -41,7 +39,7 @@ func TestIsByteArrayInSlice(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.expected, isByteArrayInSlice(tc.have, tc.haystack...))
+			musteq(t, tc.expected, isByteArrayInSlice(tc.have, tc.haystack...))
 		})
 	}
 }
@@ -103,7 +101,7 @@ func TestIsCredentialsAllowedMatchingOwned(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.expected, isCredentialsAllowedMatchingOwned(tc.allowed, tc.credentials))
+			musteq(t, tc.expected, isCredentialsAllowedMatchingOwned(tc.allowed, tc.credentials))
 		})
 	}
 }
