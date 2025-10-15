@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"encoding/asn1"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/philhofer/webauthn/metadata"
@@ -32,63 +33,51 @@ import (
 //
 // See: https://www.w3.org/TR/webauthn/#sctn-android-key-attestation
 func attestationFormatValidationHandlerAndroidKey(att AttestationObject, clientDataHash []byte, _ metadata.Provider) (attestationType string, x5cs []any, err error) {
-	var (
-		alg int64
-		sig []byte
-		ok  bool
-	)
-
 	// Given the verification procedure inputs attStmt, authenticatorData and clientDataHash, the verification procedure is as follows:
 	// §8.4.1. Verify that attStmt is valid CBOR conforming to the syntax defined above and perform CBOR decoding on it to extract
 	// the contained fields.
 	// Get the alg value - A COSEAlgorithmIdentifier containing the identifier of the algorithm
 	// used to generate the attestation signature.
-	if alg, ok = att.AttStatement[stmtAlgorithm].(int64); !ok {
+	alg, ok := att.AttStatement[stmtAlgorithm].(int64)
+	if !ok {
 		return "", nil, ErrAttestationFormat.WithDetails("Error retrieving alg value")
 	}
-
 	// Get the sig value - A byte string containing the attestation signature.
-	if sig, ok = att.AttStatement[stmtSignature].([]byte); !ok {
+	sig, ok := att.AttStatement[stmtSignature].([]byte)
+	if !ok {
 		return "", nil, ErrAttestationFormat.WithDetails("Error retrieving sig value")
 	}
 
 	// §8.4.2. Verify that sig is a valid signature over the concatenation of authenticatorData and clientDataHash
 	// using the public key in the first certificate in x5c with the algorithm specified in alg.
-	var (
-		x5c   []any
-		certs []*x509.Certificate
-	)
-
-	if x5c, certs, err = attStatementParseX5CS(att.AttStatement, stmtX5C); err != nil {
+	x5c, certs, err := attStatementParseX5CS(att.AttStatement, stmtX5C)
+	if err != nil {
 		return "", nil, err
 	}
-
 	if len(certs) == 0 {
 		return "", nil, ErrInvalidAttestation.WithDetails("No certificates in x5c")
 	}
-
 	credCert := certs[0]
-
 	if _, err = attStatementCertChainVerify(certs, attAndroidKeyHardwareRootsCertPool, true, time.Now().Add(time.Hour*8760).UTC()); err != nil {
 		return "", nil, ErrInvalidAttestation.WithDetails("Error validating x5c cert chain").WithError(err)
 	}
-
 	signatureData := append(att.RawAuthData, clientDataHash...) //nolint:gocritic // This is intentional.
-
-	if sigAlg := webauthncose.SigAlgFromCOSEAlg(webauthncose.COSEAlgorithmIdentifier(alg)); sigAlg == x509.UnknownSignatureAlgorithm {
+	sigAlg := webauthncose.SigAlgFromCOSEAlg(webauthncose.COSEAlgorithmIdentifier(alg))
+	if sigAlg == x509.UnknownSignatureAlgorithm {
 		return "", nil, ErrInvalidAttestation.WithDetails(fmt.Sprintf("Unsupported COSE alg: %d", alg))
-	} else if err = credCert.CheckSignature(sigAlg, signatureData, sig); err != nil {
+	}
+	err = credCert.CheckSignature(sigAlg, signatureData, sig)
+	if err != nil {
 		return "", nil, ErrInvalidAttestation.WithDetails(fmt.Sprintf("Signature validation error: %+v", err)).WithError(err)
 	}
 
 	// Verify that the public key in the first certificate in x5c matches the credentialPublicKey in the attestedCredentialData in authenticatorData.
-	var attPublicKeyData webauthncose.EC2PublicKeyData
-	if attPublicKeyData, err = verifyAttestationECDSAPublicKeyMatch(att, credCert); err != nil {
+	attPublicKeyData, err := verifyAttestationECDSAPublicKeyMatch(att, credCert)
+	if err != nil {
 		return "", nil, err
 	}
-
-	var valid bool
-	if valid, err = attPublicKeyData.Verify(signatureData, sig); err != nil || !valid {
+	valid, err := attPublicKeyData.Verify(signatureData, sig)
+	if err != nil || !valid {
 		return "", nil, ErrInvalidAttestation.WithDetails(fmt.Sprintf("Error parsing public key: %+v", err)).WithError(err)
 	}
 
@@ -98,23 +87,21 @@ func attestationFormatValidationHandlerAndroidKey(att AttestationObject, clientD
 	// certificate's android key attestation certificate extension data is identified by the OID
 	// "1.3.6.1.4.1.11129.2.1.17".
 	var attExtBytes []byte
-
 	for _, ext := range credCert.Extensions {
 		if ext.Id.Equal(oidExtensionAndroidKeystore) {
 			attExtBytes = ext.Value
 		}
 	}
-
 	if len(attExtBytes) == 0 {
 		return "", nil, ErrAttestationFormat.WithDetails("Attestation certificate extensions missing 1.3.6.1.4.1.11129.2.1.17")
 	}
 
 	decoded := keyDescription{}
 
-	if _, err = asn1.Unmarshal(attExtBytes, &decoded); err != nil {
+	_, err = asn1.Unmarshal(attExtBytes, &decoded)
+	if err != nil {
 		return "", nil, ErrAttestationFormat.WithDetails("Unable to parse Android key attestation certificate extensions").WithError(err)
 	}
-
 	// Verify that the attestationChallenge field in the attestation certificate extension data is identical to clientDataHash.
 	if !bytes.Equal(decoded.AttestationChallenge, clientDataHash) {
 		return "", nil, ErrAttestationFormat.WithDetails("Attestation challenge not equal to clientDataHash")
@@ -127,26 +114,16 @@ func attestationFormatValidationHandlerAndroidKey(att AttestationObject, clientD
 
 	// For the following, use only the teeEnforced authorization list if the RP wants to accept only keys from a trusted execution environment, otherwise use the union of teeEnforced and softwareEnforced.
 	// The value in the AuthorizationList.origin field is equal to KM_ORIGIN_GENERATED (which == 0).
-	if decoded.SoftwareEnforced.Origin != KM_ORIGIN_GENERATED || decoded.TeeEnforced.Origin != KM_ORIGIN_GENERATED {
-		return "", nil, ErrAttestationFormat.WithDetails("Attestation certificate extensions contains authorization list with origin not equal KM_ORIGIN_GENERATED")
+	if decoded.SoftwareEnforced.Origin != km_ORIGIN_GENERATED || decoded.TeeEnforced.Origin != km_ORIGIN_GENERATED {
+		return "", nil, ErrAttestationFormat.WithDetails("Attestation certificate extensions contains authorization list with origin not equal km_ORIGIN_GENERATED")
 	}
 
-	// The value in the AuthorizationList.purpose field is equal to KM_PURPOSE_SIGN (which == 2).
-	if !contains(decoded.SoftwareEnforced.Purpose, KM_PURPOSE_SIGN) && !contains(decoded.TeeEnforced.Purpose, KM_PURPOSE_SIGN) {
+	// The value in the AuthorizationList.purpose field is equal to km_PURPOSE_SIGN (which == 2).
+	if !slices.Contains(decoded.SoftwareEnforced.Purpose, km_PURPOSE_SIGN) && !slices.Contains(decoded.TeeEnforced.Purpose, km_PURPOSE_SIGN) {
 		return "", nil, ErrAttestationFormat.WithDetails("Attestation certificate extensions contains authorization list with purpose not equal KM_PURPOSE_SIGN")
 	}
 
 	return string(metadata.BasicFull), x5c, err
-}
-
-func contains(s []int, e int) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-
-	return false
 }
 
 type keyDescription struct {
@@ -209,46 +186,46 @@ type rootOfTrust struct {
 type verifiedBootState int
 
 const (
-	Verified verifiedBootState = iota
-	SelfSigned
-	Unverified
-	Failed
+	vbVerified verifiedBootState = iota
+	vbSelfSigned
+	vbUnverified
+	vbFailed
 )
 
 const (
 	// KM_ORIGIN_GENERATED means generated in keymaster. Should not exist outside the TEE.
-	KM_ORIGIN_GENERATED = iota
+	km_ORIGIN_GENERATED = iota
 
 	// KM_ORIGIN_DERIVED means derived inside keymaster. Likely exists off-device.
-	KM_ORIGIN_DERIVED
+	km_ORIGIN_DERIVED
 
 	// KM_ORIGIN_IMPORTED means imported into keymaster. Existed as clear text in Android.
-	KM_ORIGIN_IMPORTED
+	km_ORIGIN_IMPORTED
 
 	// KM_ORIGIN_UNKNOWN means keymaster did not record origin.  This value can only be seen on keys in a keymaster0
 	// implementation. The keymaster0 adapter uses this value to document the fact that it is unknown whether the key
 	// was generated inside or imported into keymaster.
-	KM_ORIGIN_UNKNOWN
+	km_ORIGIN_UNKNOWN
 )
 
 const (
 	// KM_PURPOSE_ENCRYPT is usable with RSA, EC and AES keys.
-	KM_PURPOSE_ENCRYPT = iota
+	km_PURPOSE_ENCRYPT = iota
 
 	// KM_PURPOSE_DECRYPT is usable with RSA, EC and AES keys.
-	KM_PURPOSE_DECRYPT
+	km_PURPOSE_DECRYPT
 
 	// KM_PURPOSE_SIGN is usable with RSA, EC and HMAC keys.
-	KM_PURPOSE_SIGN
+	km_PURPOSE_SIGN
 
 	// KM_PURPOSE_VERIFY is usable with RSA, EC and HMAC keys.
-	KM_PURPOSE_VERIFY
+	km_PURPOSE_VERIFY
 
 	// KM_PURPOSE_DERIVE_KEY is usable with EC keys.
-	KM_PURPOSE_DERIVE_KEY
+	km_PURPOSE_DERIVE_KEY
 
 	// KM_PURPOSE_WRAP is usable with wrapped keys.
-	KM_PURPOSE_WRAP
+	km_PURPOSE_WRAP
 )
 
 var (
