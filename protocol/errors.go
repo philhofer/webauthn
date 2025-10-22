@@ -1,5 +1,9 @@
 package protocol
 
+import (
+	"fmt"
+)
+
 type Error struct {
 	// Short name for the type of error that has occurred.
 	Type string `json:"type"`
@@ -15,62 +19,74 @@ type Error struct {
 }
 
 func (e *Error) Error() string {
-	return e.Details
+	if e.Err == nil {
+		return e.Details
+	}
+	return fmt.Sprintf("%s: %s", e.Details, e.Err)
 }
 
 func (e *Error) Unwrap() error {
 	return e.Err
 }
 
+// Is compares an Error for [errors.Is].
+//
+// Is checks that [err] has type [*Error]
+// and that its [Type] field is equal to [e.Type].
+func (e *Error) Is(err error) bool {
+	et, ok := err.(*Error)
+	return ok && et.Type == e.Type
+}
+
+// WithDetails copies the error and sets [e.Details] to [details].
 func (e *Error) WithDetails(details string) *Error {
 	err := *e
 	err.Details = details
-
 	return &err
 }
 
+// WithInfo copies the error and sets [e.DevInfo] to [info].
 func (e *Error) WithInfo(info string) *Error {
 	err := *e
 	err.DevInfo = info
-
 	return &err
 }
 
+// WithError copies the error and sets [e.Err] to [err].
 func (e *Error) WithError(err error) *Error {
 	errCopy := *e
 	errCopy.Err = err
-
 	return &errCopy
 }
 
 var (
 	ErrBadRequest = &Error{
 		Type:    "invalid_request",
-		Details: "Error reading the request data",
+		Details: "error reading the request data",
 	}
 	ErrChallengeMismatch = &Error{
 		Type:    "challenge_mismatch",
-		Details: "Stored challenge and received challenge do not match",
+		Details: "stored challenge and received challenge do not match",
 	}
 	ErrParsingData = &Error{
 		Type:    "parse_error",
-		Details: "Error parsing the authenticator response",
+		Details: "error parsing the authenticator response",
 	}
 	ErrAuthData = &Error{
 		Type:    "auth_data",
-		Details: "Error verifying the authenticator data",
+		Details: "error verifying the authenticator data",
 	}
 	ErrVerification = &Error{
 		Type:    "verification_error",
-		Details: "Error validating the authenticator response",
+		Details: "error validating the authenticator response",
 	}
 	ErrAttestation = &Error{
 		Type:    "attestation_error",
-		Details: "Error validating the attestation data provided",
+		Details: "error validating the attestation data provided",
 	}
 	ErrInvalidAttestation = &Error{
 		Type:    "invalid_attestation",
-		Details: "Invalid attestation data",
+		Details: "invalid attestation data",
 	}
 	ErrMetadata = &Error{
 		Type:    "invalid_metadata",
@@ -78,30 +94,30 @@ var (
 	}
 	ErrAttestationFormat = &Error{
 		Type:    "invalid_attestation",
-		Details: "Invalid attestation format",
+		Details: "invalid attestation format",
 	}
 	ErrAttestationCertificate = &Error{
 		Type:    "invalid_certificate",
-		Details: "Invalid attestation certificate",
+		Details: "invalid attestation certificate",
 	}
 	ErrAssertionSignature = &Error{
 		Type:    "invalid_signature",
-		Details: "Assertion Signature against auth data and client hash is not valid",
+		Details: "assertion Signature against auth data and client hash is not valid",
 	}
 	ErrUnsupportedKey = &Error{
 		Type:    "invalid_key_type",
-		Details: "Unsupported Public Key Type",
+		Details: "unsupported Public Key Type",
 	}
 	ErrUnsupportedAlgorithm = &Error{
 		Type:    "unsupported_key_algorithm",
-		Details: "Unsupported public key algorithm",
+		Details: "unsupported public key algorithm",
 	}
 	ErrNotSpecImplemented = &Error{
 		Type:    "spec_unimplemented",
-		Details: "This field is not yet supported by the WebAuthn spec",
+		Details: "this field is not yet supported by the WebAuthn spec",
 	}
 	ErrNotImplemented = &Error{
 		Type:    "not_implemented",
-		Details: "This field is not yet supported by this library",
+		Details: "this field is not yet supported by this library",
 	}
 )
