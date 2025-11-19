@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"io"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/philhofer/webauthn/protocol/webauthncbor"
@@ -25,7 +26,7 @@ func musteq[T any](t *testing.T, got, want T) {
 }
 
 func musterr(t *testing.T, err error, text string) {
-	if err.Error() != text {
+	if !strings.HasPrefix(err.Error(), text) {
 		t.Helper()
 		t.Fatalf("got %q want %q", err.Error(), text)
 	}

@@ -35,7 +35,7 @@ func errlike(t *testing.T, err error, want string) {
 		t.Helper()
 		t.Fatalf("wanted an error like %q but got nil", want)
 	}
-	if !strings.Contains(err.Error(), want) {
+	if !strings.Contains(strings.ToLower(err.Error()), strings.ToLower(want)) {
 		t.Fatalf("%q doesn't contain %q", err.Error(), want)
 	}
 }

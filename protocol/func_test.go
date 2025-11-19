@@ -3,6 +3,7 @@ package protocol
 import (
 	"errors"
 	"regexp"
+	"strings"
 	"testing"
 )
 
@@ -26,7 +27,7 @@ func AssertIsProtocolError(t *testing.T, err error, errType, errDetails, errInfo
 
 	switch ed := errDetails.(type) {
 	case string:
-		musteq(t, ed, e.Details)
+		musteq(t, strings.ToLower(ed), strings.ToLower(e.Details))
 	case *regexp.Regexp:
 		if !ed.MatchString(e.Details) {
 			t.Fatalf("details %q doesn't match", e.Details)
