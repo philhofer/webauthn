@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
 
@@ -77,6 +78,8 @@ type Parsed struct {
 
 // PayloadJSON is an intermediary JSON/JWT representation of the [Parsed] struct.
 type PayloadJSON struct {
+	jwt.RegisteredClaims
+
 	LegalHeader string `json:"legalHeader"`
 	Number      int    `json:"no"`
 	NextUpdate  string `json:"nextUpdate"`
@@ -820,7 +823,7 @@ type BiometricAccuracyDescriptor struct {
 type PatternAccuracyDescriptor struct {
 	// MinComplexity is the number of possible patterns (having the minimum length) out of which exactly one would be
 	// the right one, i.e. 1/probability in the case of equal distribution.
-	MinComplexity uint32 `json:"minComplexity"`
+	MinComplexity uint64 `json:"minComplexity"`
 
 	// MaxRetries is the maximum number of false attempts before the authenticator will block authentication using this
 	// method (at least temporarily). 0 means it will never block.

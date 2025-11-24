@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/mitchellh/mapstructure"
 
 	"github.com/philhofer/webauthn/internal/revoke"
 )
@@ -20,8 +19,6 @@ import (
 func NewDecoder(opts ...DecoderOption) (decoder *Decoder, err error) {
 	decoder = &Decoder{
 		client: &http.Client{},
-		parser: jwt.NewParser(),
-		hook:   mapstructure.ComposeDecodeHookFunc(),
 	}
 
 	for _, opt := range opts {
@@ -40,8 +37,6 @@ func NewDecoder(opts ...DecoderOption) (decoder *Decoder, err error) {
 // Decoder handles decoding and specialized parsing of the metadata blob.
 type Decoder struct {
 	client                   *http.Client
-	parser                   *jwt.Parser
-	hook                     mapstructure.DecodeHookFunc
 	root                     string
 	ignoreEntryParsingErrors bool
 }
@@ -93,10 +88,10 @@ func (d *Decoder) Decode(r io.Reader) (payload *PayloadJSON, err error) {
 }
 
 // DecodeBytes handles decoding raw bytes. If you have a read closer it's suggested to use [Decoder.Decode].
-func (d *Decoder) DecodeBytes(bytes []byte) (payload *PayloadJSON, err error) {
-	var token *jwt.Token
-
-	if token, err = d.parser.Parse(string(bytes), func(token *jwt.Token) (any, error) {
+func (d *Decoder) DecodeBytes(bytes []byte) (*PayloadJSON, error) {
+	payload := &PayloadJSON{}
+	token, err := jwt.ParseWithClaims(string(bytes), payload, func(token *jwt.Token) (any, error) {
+		var err error
 		// 2. If the x5u attribute is present in the JWT Header.
 		if _, ok := token.Header[HeaderX509URI].([]any); ok {
 			// Never seen an x5u here, although it is in the spec.
@@ -143,28 +138,11 @@ func (d *Decoder) DecodeBytes(bytes []byte) (payload *PayloadJSON, err error) {
 		// 4. Verify the signature of the Metadata TOC object using the TOC signing certificate chain
 		// jwt.Parse() uses the TOC signing certificate public key internally to verify the signature.
 		return cert.PublicKey, err
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, err
 	}
-
-	var decoder *mapstructure.Decoder
-
-	payload = &PayloadJSON{}
-
-	if decoder, err = mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-		Metadata:   nil,
-		Result:     payload,
-		DecodeHook: d.hook,
-		TagName:    "json",
-	}); err != nil {
-		return nil, err
-	}
-
-	if err = decoder.Decode(token.Claims); err != nil {
-		return payload, err
-	}
-
-	return payload, nil
+	return token.Claims.(*PayloadJSON), nil
 }
 
 // DecoderOption is a representation of a function that can set options within a decoder.
